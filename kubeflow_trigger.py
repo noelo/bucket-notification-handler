@@ -1,11 +1,12 @@
-from flask import Flask, request, make_response
-import json
-import uuid
-from cloudevents.http import CloudEvent, from_http
-from cloudevents.conversion import to_binary
 import kfp
 import os
 import time
+import uuid
+from flask import Flask, request, make_response
+# import json
+
+from cloudevents.http import from_http
+# from cloudevents.conversion import to_binary
 
 app = Flask(__name__)
 
@@ -33,7 +34,7 @@ def handle_event():
     return response
 
 def kubeflow_handler(kfp_host:str, kfp_name:str,file_obj:str, src_bucket:str)->None:
-    print('Connecting to kubeflow API.....',kfp_host)
+    print('kubeflow_handler...Connecting to kubeflow API.....',kfp_host)
     client = kfp.Client(host=kfp_host)
     print('Connecting to kubeflow API.....connected')
 
@@ -41,12 +42,14 @@ def kubeflow_handler(kfp_host:str, kfp_name:str,file_obj:str, src_bucket:str)->N
     if pipline_id is None:
         print("No pipeline found with name ",kfp_name)
     else:
-        exp_obj = client.create_experiment("BatteryMonitoringExperiment"+str(time.asctime()),"Battery monitoring experiment")
+        try :
+            exp_obj = client.get_experiment(experiment_id="BatteryMonitoringExperiment")
+        except:
+            exp_obj = client.create_experiment("BatteryMonitoringExperiment","Battery monitoring experiment")
         params_dict = dict(file_obj= file_obj, src_bucket = src_bucket)
-        run = client.run_pipeline(exp_obj.id,"battery monitor run", pipeline_id = pipline_id,params=params_dict)
-        print("Pipleline Run submitted ",run)    
-    print('Connecting to kubeflow API.....finish')
+        run = client.run_pipeline(exp_obj.id,"battery monitor run @ "+str(time.asctime()), pipeline_id = pipline_id,params=params_dict)
+        print("Pipleline Run submitted ",run)
+    print('kubeflow_handler.....finish')
     
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=8080)
-
