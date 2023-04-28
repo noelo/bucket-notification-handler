@@ -1,6 +1,11 @@
 
 # Ceph Notification setup
 
+
+```
+object-store->bucket->notification->topic->ceph-source-service->ceph-source->knative_service->kfp_api->experiment->run
+```
+
 # Build and push image
 ```
 podman build -t python-app .
@@ -147,4 +152,46 @@ aws sns delete-topic --endpoint-url http://rook-ceph-rgw-ceph-object-store.opens
 aws --endpoint-url http://rook-ceph-rgw-ceph-object-store.openshift-storage.svc:8080 s3api put-bucket-notification-configuration --bucket noc-test --notification-configuration='{}'
 
 aws s3api get-bucket-notification --bucket noc-test --endpoint-url http://rook-ceph-rgw-ceph-object-store.openshift-storage.svc:8080
+```
+
+## Configure the KFP name in the handler 
+```
+kn service update bucket-handler --env KFP_NAME=fdt
+kn service update bucket-handler --env KFP_API=http://ds-pipeline.redhat-ods-applications.svc.cluster.local:8888
+kn service update bucket-handler --image quay.io/noeloc/bucket-notification-handler:latest
+```
+
+
+```
+[root@aws-cli-runner /]# aws sns list-topics --endpoint-url http://rook-ceph-rgw-ceph-object-store.openshift-storage.svc:8080
+{
+    "Topics": [
+        {
+            "TopicArn": "arn:aws:sns:ceph-object-store::noc-test-topic"
+        },
+        {
+            "TopicArn": "arn:aws:sns:ceph-object-store::vehicle-data"
+        }
+    ]
+}
+[root@aws-cli-runner /]# aws sns get-topic-attributes --topic-arn arn:aws:sns:ceph-object-store::vehicle-data --endpoint-url http://rook-ceph-rgw-ceph-object-store.openshift-storage.svc:8080
+{
+    "Attributes": {
+        "User": "",
+        "Name": "vehicle-data",
+        "EndPoint": "{\"EndpointAddress\":\"http://vehicle-data-ceph-source-svc.battery-monitoring.svc.cluster.local\",\"EndpointArgs\":\"Attributes.entry.1.key=push-endpoint&Attributes.entry.1.value=http://vehicle-data-ceph-source-svc.battery-monitoring.svc.cluster.local&Version=2010-03-31&push-endpoint=http://vehicle-data-ceph-source-svc.battery-monitoring.svc.cluster.local\",\"EndpointTopic\":\"vehicle-data\",\"HasStoredSecret\":\"false\",\"Persistent\":\"false\"}",
+        "TopicArn": "arn:aws:sns:ceph-object-store::vehicle-data",
+        "OpaqueData": ""
+    }
+}
+[root@aws-cli-runner /]# aws sns get-topic-attributes --topic-arn arn:aws:sns:ceph-object-store::noc-test-topic --endpoint-url http://rook-ceph-rgw-ceph-object-store.openshift-storage.svc:8080
+{
+    "Attributes": {
+        "User": "",
+        "Name": "noc-test-topic",
+        "EndPoint": "{\"EndpointAddress\":\"http://ceph-bucket-source-svc.battery-monitoring.svc.cluster.local\",\"EndpointArgs\":\"Attributes.entry.1.key=push-endpoint&Attributes.entry.1.value=http://ceph-bucket-source-svc.battery-monitoring.svc.cluster.local&Version=2010-03-31&push-endpoint=http://ceph-bucket-source-svc.battery-monitoring.svc.cluster.local\",\"EndpointTopic\":\"noc-test-topic\",\"HasStoredSecret\":\"false\",\"Persistent\":\"false\"}",
+        "TopicArn": "arn:aws:sns:ceph-object-store::noc-test-topic",
+        "OpaqueData": ""
+    }
+}
 ```
