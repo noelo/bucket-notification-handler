@@ -3,7 +3,7 @@
 
 
 ```
-object-store->bucket->notification->topic->ceph-source-service->ceph-source->knative_service->kfp_api->experiment->run
+object-store->bucket(noc-test)->notification->topic(noc-test-topic)->k8s_svc(ceph-bucket-source-svc)->CephSource(ceph-bucket-source)->knative_service(bucket-handler)->kfp_api->experiment->run
 ```
 
 # Build and push image
@@ -101,8 +101,7 @@ spec:
 
 ## Extract secret values
 ```
-kubectl get secret noc-test -o go-template='
-{{range $k,$v := .data}}{{printf "%s: " $k}}{{if not $v}}{{$v}}{{else}}{{$v | base64decode}}{{end}}{{"\n"}}{{end}}'
+kubectl get secret noc-test -o go-template='{{range $k,$v := .data}}{{printf "%s: " $k}}{{if not $v}}{{$v}}{{else}}{{$v | base64decode}}{{end}}{{"\n"}}{{end}}'
 ```
 
 ## Instantiate AWS cli pod
@@ -174,6 +173,8 @@ kn service update bucket-handler --image quay.io/noeloc/bucket-notification-hand
         }
     ]
 }
+
+
 [root@aws-cli-runner /]# aws sns get-topic-attributes --topic-arn arn:aws:sns:ceph-object-store::vehicle-data --endpoint-url http://rook-ceph-rgw-ceph-object-store.openshift-storage.svc:8080
 {
     "Attributes": {
@@ -184,6 +185,9 @@ kn service update bucket-handler --image quay.io/noeloc/bucket-notification-hand
         "OpaqueData": ""
     }
 }
+
+
+
 [root@aws-cli-runner /]# aws sns get-topic-attributes --topic-arn arn:aws:sns:ceph-object-store::noc-test-topic --endpoint-url http://rook-ceph-rgw-ceph-object-store.openshift-storage.svc:8080
 {
     "Attributes": {
@@ -193,5 +197,21 @@ kn service update bucket-handler --image quay.io/noeloc/bucket-notification-hand
         "TopicArn": "arn:aws:sns:ceph-object-store::noc-test-topic",
         "OpaqueData": ""
     }
+}
+
+
+
+[root@aws-cli-runner /]# aws s3api get-bucket-notification-configuration --bucket noc-test --endpoint-url http://rook-ceph-rgw-ceph-object-store.openshift-storage.svc:8080
+{
+    "TopicConfigurations": [
+        {
+            "Id": "notif2",
+            "TopicArn": "arn:aws:sns:ceph-object-store::noc-test-topic",
+            "Events": [
+                "s3:ObjectCreated:*",
+                "s3:ObjectRemoved:*"
+            ]
+        }
+    ]
 }
 ```
