@@ -19,7 +19,7 @@ def handle_event():
     print(trigger,fileobj,srcbucket)
     kfp_api = os.environ.get('KFP_API')
     kfp_name = os.environ.get('KFP_NAME')
-    if trigger == 'com.amazonaws.ObjectCreated:Put':
+    if trigger == 'com.amazonaws.ObjectCreated:CompleteMultipartUpload':
         kubeflow_handler(kfp_api,kfp_name,fileobj,srcbucket)
 
     response = make_response({
